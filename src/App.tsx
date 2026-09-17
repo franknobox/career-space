@@ -87,6 +87,8 @@ function scheduleColorIndex(id: string) {
   return Math.abs(hash) % 8
 }
 
+const SCHEDULE_COLOR_FAMILIES = ['green', 'purple', 'warm', 'yellow', 'red', 'warm', 'blue', 'green'] as const
+
 function todayLabel() {
   return new Intl.DateTimeFormat('zh-CN', {
     year: 'numeric',
@@ -1714,12 +1716,17 @@ function SchedulePage({
             const hasSplitPeriodEndpoints = endingPeriods.length > 0 && startingPeriods.length > 0
             const endpointColorIndexes = new Map<string, number>()
             const usedEndpointColors = new Set<number>()
+            const usedEndpointColorFamilies = new Set<string>()
             ;[...endingPeriods, ...startingPeriods].forEach((event) => {
               const baseColorIndex = scheduleColorIndex(event.id)
-              const colorIndex = Array.from({ length: 8 }, (_, offset) => (baseColorIndex + offset) % 8)
-                .find((candidate) => !usedEndpointColors.has(candidate)) ?? baseColorIndex
+              const colorCandidates = Array.from({ length: 8 }, (_, offset) => (baseColorIndex + offset) % 8)
+              const colorIndex = colorCandidates.find((candidate) => (
+                !usedEndpointColors.has(candidate)
+                && !usedEndpointColorFamilies.has(SCHEDULE_COLOR_FAMILIES[candidate])
+              )) ?? colorCandidates.find((candidate) => !usedEndpointColors.has(candidate)) ?? baseColorIndex
               endpointColorIndexes.set(event.id, colorIndex)
               usedEndpointColors.add(colorIndex)
+              usedEndpointColorFamilies.add(SCHEDULE_COLOR_FAMILIES[colorIndex])
             })
             const interviewCount = interviewEvents.length
             const hasManyInterviews = interviewCount > 2
