@@ -1709,12 +1709,24 @@ function SchedulePage({
             const dayEvents = eventsFor(date)
             const periodEvents = dayEvents.filter((event) => event.type === 'period')
             const interviewEvents = dayEvents.filter((event) => event.type === 'interview')
+            const endingPeriods = periodEvents.filter((event) => event.endDate === dateKey && event.startDate !== dateKey)
+            const startingPeriods = periodEvents.filter((event) => event.startDate === dateKey && event.endDate !== dateKey)
+            const hasSplitPeriodEndpoints = endingPeriods.length > 0 && startingPeriods.length > 0
+            const endpointColorIndexes = new Map<string, number>()
+            const usedEndpointColors = new Set<number>()
+            ;[...endingPeriods, ...startingPeriods].forEach((event) => {
+              const baseColorIndex = scheduleColorIndex(event.id)
+              const colorIndex = Array.from({ length: 8 }, (_, offset) => (baseColorIndex + offset) % 8)
+                .find((candidate) => !usedEndpointColors.has(candidate)) ?? baseColorIndex
+              endpointColorIndexes.set(event.id, colorIndex)
+              usedEndpointColors.add(colorIndex)
+            })
             const interviewCount = interviewEvents.length
             const hasManyInterviews = interviewCount > 2
             const isDayScrolled = scrolledDays[dateKey] === true
             const isCurrentMonth = date.getMonth() === monthIndex
             return (
-              <div className={`schedule-day ${isCurrentMonth ? '' : 'outside-month'} ${dateKey === todayKey ? 'today' : ''} ${periodEvents.length ? 'has-period' : ''}`} key={dateKey}>
+              <div className={`schedule-day ${isCurrentMonth ? '' : 'outside-month'} ${dateKey === todayKey ? 'today' : ''} ${periodEvents.length ? 'has-period' : ''} ${hasSplitPeriodEndpoints ? 'split-period-endpoints' : ''}`} key={dateKey}>
                 <button className="schedule-day-number" onClick={() => onNewAtDate(dateKey)}>{date.getDate()}</button>
                 {periodEvents.map((event, periodIndex) => {
                   const isConnector = dateKey !== event.startDate && dateKey !== event.endDate
@@ -1722,7 +1734,7 @@ function SchedulePage({
                   return isConnector ? (
                     <button className={`schedule-period-connector schedule-color-${scheduleColorIndex(event.id)}`} style={{ top: `${22 + connectorIndex * 8}px` }} key={event.id} onClick={() => onEdit(event)} title={event.title} aria-label={event.title} />
                   ) : (
-                    <button className={`schedule-event period schedule-color-${scheduleColorIndex(event.id)} ${dateKey === event.startDate ? 'period-start' : ''} ${dateKey === event.endDate ? 'period-end' : ''}`} key={event.id} onClick={() => onEdit(event)} title={event.title}>
+                    <button className={`schedule-event period schedule-color-${endpointColorIndexes.get(event.id) ?? scheduleColorIndex(event.id)} ${dateKey === event.startDate ? 'period-start' : ''} ${dateKey === event.endDate ? 'period-end' : ''}`} key={event.id} onClick={() => onEdit(event)} title={event.title}>
                       <span className="schedule-period-marker">{dateKey === event.startDate ? '开始' : '结束'}</span>{event.title}
                     </button>
                   )

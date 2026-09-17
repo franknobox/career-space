@@ -864,6 +864,9 @@ textarea:focus-visible {
 .schedule-event.period { color: #665579; border-color: #d0c2dc; background: #ede7f2; }
 .schedule-event.period { padding-top: 3px; padding-bottom: 3px; font-size: 9px; }
 .schedule-event.period { position: absolute; z-index: 2; top: 17px; left: 7px; }
+.schedule-day.split-period-endpoints .schedule-event.period { max-width: calc(50% - 28px); }
+.schedule-day.split-period-endpoints .schedule-event.period-end { right: auto; left: 7px; }
+.schedule-day.split-period-endpoints .schedule-event.period-start { right: 42px; left: auto; }
 .schedule-event:hover { filter: brightness(.97); }
 .schedule-event span { margin-right: 5px; color: #71877c; font-family: 'DM Mono', monospace; font-size: 9px; }
 .schedule-event.interview > span { font-size: 11px; font-weight: 600; }
@@ -903,6 +906,9 @@ textarea:focus-visible {
   .schedule-day-events.has-many-interviews { height: 48px; max-height: 48px; }
   .schedule-day.has-period .schedule-day-events.has-many-interviews { height: 48px; max-height: 48px; }
   .schedule-event.period { top: 13px; left: 5px; }
+  .schedule-day.split-period-endpoints .schedule-event.period { max-width: calc(50% - 22px); }
+  .schedule-day.split-period-endpoints .schedule-event.period-end { left: 5px; }
+  .schedule-day.split-period-endpoints .schedule-event.period-start { right: 34px; left: auto; }
   .schedule-day-number { width: 24px; height: 24px; font-size: 11px; }
   .schedule-event { padding: 4px; font-size: 9px; }
   .schedule-event span { display: none; }
