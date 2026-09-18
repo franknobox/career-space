@@ -1688,6 +1688,28 @@ function SchedulePage({
       return aTime.localeCompare(bTime)
     })
   }
+  const allPeriodEvents = events.filter((event) => event.type === 'period')
+  const periodColorIndexes = new Map(allPeriodEvents.map((event) => [event.id, scheduleColorIndex(event.id)]))
+  const periodEndpointDates = [...new Set(allPeriodEvents.flatMap((event) => [event.startDate, event.endDate]))].sort()
+  periodEndpointDates.forEach((dateKey) => {
+    const endingPeriods = allPeriodEvents.filter((event) => event.endDate === dateKey && event.startDate !== dateKey)
+    const startingPeriods = allPeriodEvents.filter((event) => event.startDate === dateKey && event.endDate !== dateKey)
+    if (!endingPeriods.length || !startingPeriods.length) return
+
+    const usedColors = new Set(endingPeriods.map((event) => periodColorIndexes.get(event.id) ?? scheduleColorIndex(event.id)))
+    const usedColorFamilies = new Set([...usedColors].map((colorIndex) => SCHEDULE_COLOR_FAMILIES[colorIndex]))
+    startingPeriods.forEach((event) => {
+      const baseColorIndex = periodColorIndexes.get(event.id) ?? scheduleColorIndex(event.id)
+      const colorCandidates = Array.from({ length: 8 }, (_, offset) => (baseColorIndex + offset) % 8)
+      const colorIndex = colorCandidates.find((candidate) => (
+        !usedColors.has(candidate)
+        && !usedColorFamilies.has(SCHEDULE_COLOR_FAMILIES[candidate])
+      )) ?? colorCandidates.find((candidate) => !usedColors.has(candidate)) ?? baseColorIndex
+      periodColorIndexes.set(event.id, colorIndex)
+      usedColors.add(colorIndex)
+      usedColorFamilies.add(SCHEDULE_COLOR_FAMILIES[colorIndex])
+    })
+  })
 
   return (
     <div className="schedule-page">
@@ -1714,20 +1736,6 @@ function SchedulePage({
             const endingPeriods = periodEvents.filter((event) => event.endDate === dateKey && event.startDate !== dateKey)
             const startingPeriods = periodEvents.filter((event) => event.startDate === dateKey && event.endDate !== dateKey)
             const hasSplitPeriodEndpoints = endingPeriods.length > 0 && startingPeriods.length > 0
-            const endpointColorIndexes = new Map<string, number>()
-            const usedEndpointColors = new Set<number>()
-            const usedEndpointColorFamilies = new Set<string>()
-            ;[...endingPeriods, ...startingPeriods].forEach((event) => {
-              const baseColorIndex = scheduleColorIndex(event.id)
-              const colorCandidates = Array.from({ length: 8 }, (_, offset) => (baseColorIndex + offset) % 8)
-              const colorIndex = colorCandidates.find((candidate) => (
-                !usedEndpointColors.has(candidate)
-                && !usedEndpointColorFamilies.has(SCHEDULE_COLOR_FAMILIES[candidate])
-              )) ?? colorCandidates.find((candidate) => !usedEndpointColors.has(candidate)) ?? baseColorIndex
-              endpointColorIndexes.set(event.id, colorIndex)
-              usedEndpointColors.add(colorIndex)
-              usedEndpointColorFamilies.add(SCHEDULE_COLOR_FAMILIES[colorIndex])
-            })
             const interviewCount = interviewEvents.length
             const hasManyInterviews = interviewCount > 2
             const isDayScrolled = scrolledDays[dateKey] === true
@@ -1739,9 +1747,9 @@ function SchedulePage({
                   const isConnector = dateKey !== event.startDate && dateKey !== event.endDate
                   const connectorIndex = periodEvents.slice(0, periodIndex).filter((item) => dateKey !== item.startDate && dateKey !== item.endDate).length
                   return isConnector ? (
-                    <button className={`schedule-period-connector schedule-color-${scheduleColorIndex(event.id)}`} style={{ top: `${22 + connectorIndex * 8}px` }} key={event.id} onClick={() => onEdit(event)} title={event.title} aria-label={event.title} />
+                    <button className={`schedule-period-connector schedule-color-${periodColorIndexes.get(event.id) ?? scheduleColorIndex(event.id)}`} style={{ top: `${22 + connectorIndex * 8}px` }} key={event.id} onClick={() => onEdit(event)} title={event.title} aria-label={event.title} />
                   ) : (
-                    <button className={`schedule-event period schedule-color-${endpointColorIndexes.get(event.id) ?? scheduleColorIndex(event.id)} ${dateKey === event.startDate ? 'period-start' : ''} ${dateKey === event.endDate ? 'period-end' : ''}`} key={event.id} onClick={() => onEdit(event)} title={event.title}>
+                    <button className={`schedule-event period schedule-color-${periodColorIndexes.get(event.id) ?? scheduleColorIndex(event.id)} ${dateKey === event.startDate ? 'period-start' : ''} ${dateKey === event.endDate ? 'period-end' : ''}`} key={event.id} onClick={() => onEdit(event)} title={event.title}>
                       <span className="schedule-period-marker">{dateKey === event.startDate ? '开始' : '结束'}</span>{event.title}
                     </button>
                   )
