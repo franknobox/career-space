@@ -89,6 +89,45 @@ function scheduleColorIndex(id: string) {
 
 const SCHEDULE_COLOR_FAMILIES = ['green', 'purple', 'warm', 'yellow', 'red', 'warm', 'blue', 'green'] as const
 
+type HolidayMarker = { kind: 'holiday' | 'workday'; label: string }
+
+function createChinaHolidayMarkers2026() {
+  const markers: Record<string, HolidayMarker> = {}
+  const holidayPeriods = [
+    ['2026-01-01', '2026-01-03', '元旦'],
+    ['2026-02-15', '2026-02-23', '春节'],
+    ['2026-04-04', '2026-04-06', '清明节'],
+    ['2026-05-01', '2026-05-05', '劳动节'],
+    ['2026-06-19', '2026-06-21', '端午节'],
+    ['2026-09-25', '2026-09-27', '中秋节'],
+    ['2026-10-01', '2026-10-07', '国庆节'],
+  ] as const
+
+  holidayPeriods.forEach(([startDate, endDate, label]) => {
+    const cursor = new Date(`${startDate}T00:00:00Z`)
+    const end = new Date(`${endDate}T00:00:00Z`)
+    while (cursor <= end) {
+      markers[cursor.toISOString().slice(0, 10)] = { kind: 'holiday', label }
+      cursor.setUTCDate(cursor.getUTCDate() + 1)
+    }
+  })
+
+  const adjustedWorkdays: Record<string, string> = {
+    '2026-01-04': '元旦调休上班',
+    '2026-02-14': '春节调休上班',
+    '2026-02-28': '春节调休上班',
+    '2026-05-09': '劳动节调休上班',
+    '2026-09-20': '国庆节调休上班',
+    '2026-10-10': '国庆节调休上班',
+  }
+  Object.entries(adjustedWorkdays).forEach(([date, label]) => {
+    markers[date] = { kind: 'workday', label }
+  })
+  return markers
+}
+
+const CHINA_HOLIDAY_MARKERS_2026 = createChinaHolidayMarkers2026()
+
 function todayLabel() {
   return new Intl.DateTimeFormat('zh-CN', {
     year: 'numeric',
@@ -98,12 +137,11 @@ function todayLabel() {
   }).format(new Date())
 }
 
-function isFutureOrToday(value: string) {
-  if (!value) return false
-  const target = new Date(value)
-  const start = new Date()
-  start.setHours(0, 0, 0, 0)
-  return target >= start
+function isUpcomingScheduleInterview(event: ScheduleEvent) {
+  if (event.type !== 'interview' || !event.date) return false
+  const cutoffTime = event.endTime || event.startTime || '23:59'
+  const cutoff = new Date(`${event.date}T${cutoffTime}:00`)
+  return !Number.isNaN(cutoff.getTime()) && cutoff >= new Date()
 }
 
 function getGreeting() {
@@ -674,16 +712,13 @@ function App() {
     [data.interviews],
   )
 
-  const upcomingInterviews = data.interviews.reduce(
-    (count, item) =>
-      count +
-      item.rounds.filter(
-        (round) => round.result === 'pending' && isFutureOrToday(round.date),
-      ).length,
-    0,
-  )
+  const upcomingInterviews = data.scheduleEvents.filter(isUpcomingScheduleInterview).length
   const activeApplications = data.applications.filter((item) =>
     ['applied', 'assessment', 'interview'].includes(item.status),
+  ).length
+  const currentCompanyNames = new Set(data.companies.filter((company) => !company.archived).map((company) => company.name))
+  const inProgressApplications = data.applications.filter((item) =>
+    currentCompanyNames.has(item.company) && ['applied', 'assessment', 'interview'].includes(item.status),
   ).length
   const offers = data.applications.filter((item) => item.status === 'offer').length
 
@@ -716,8 +751,8 @@ function App() {
               >
                 <Icon size={19} strokeWidth={1.8} />
                 <span>{item.label}</span>
-                {item.id === 'applications' && data.applications.length > 0 && (
-                  <em>{data.applications.length}</em>
+                {item.id === 'applications' && inProgressApplications > 0 && (
+                  <em>{inProgressApplications}</em>
                 )}
               </button>
             )
@@ -1730,6 +1765,7 @@ function SchedulePage({
         <div className="schedule-grid">
           {days.map((date) => {
             const dateKey = keyOf(date)
+            const holidayMarker = CHINA_HOLIDAY_MARKERS_2026[dateKey]
             const dayEvents = eventsFor(date)
             const periodEvents = dayEvents.filter((event) => event.type === 'period')
             const interviewEvents = dayEvents.filter((event) => event.type === 'interview')
@@ -1741,7 +1777,7 @@ function SchedulePage({
             const isDayScrolled = scrolledDays[dateKey] === true
             const isCurrentMonth = date.getMonth() === monthIndex
             return (
-              <div className={`schedule-day ${isCurrentMonth ? '' : 'outside-month'} ${dateKey === todayKey ? 'today' : ''} ${periodEvents.length ? 'has-period' : ''} ${hasSplitPeriodEndpoints ? 'split-period-endpoints' : ''}`} key={dateKey}>
+              <div className={`schedule-day ${isCurrentMonth ? '' : 'outside-month'} ${dateKey === todayKey ? 'today' : ''} ${periodEvents.length ? 'has-period' : ''} ${hasSplitPeriodEndpoints ? 'split-period-endpoints' : ''} ${holidayMarker ? 'has-holiday-marker' : ''}`} key={dateKey}>
                 <button className="schedule-day-number" onClick={() => onNewAtDate(dateKey)}>{date.getDate()}</button>
                 {periodEvents.map((event, periodIndex) => {
                   const isConnector = dateKey !== event.startDate && dateKey !== event.endDate
@@ -1770,6 +1806,15 @@ function SchedulePage({
                     return isOverflowAnchor ? <div className="schedule-event-overflow-row" key={`overflow-${event.id}`}>{eventButton}{!isDayScrolled && <span className="schedule-event-overflow">+{overflowCount}</span>}</div> : eventButton
                   })}
                 </div>
+                {holidayMarker && (
+                  <span
+                    className={`holiday-marker ${holidayMarker.kind}`}
+                    title={holidayMarker.label}
+                    aria-label={holidayMarker.label}
+                  >
+                    {holidayMarker.kind === 'holiday' ? '休' : '班'}
+                  </span>
+                )}
               </div>
             )
           })}

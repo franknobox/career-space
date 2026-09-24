@@ -850,7 +850,11 @@ textarea:focus-visible {
 .schedule-day-number { position: relative; z-index: 2; display: block; width: 28px; height: 28px; margin-left: auto; padding: 0; color: #68716f; border: 0; border-radius: 50%; background: transparent; font-size: 12px; }
 .schedule-day-number:hover { color: #fff; background: #806b9b; }
 .schedule-day.today .schedule-day-number { color: #fff; background: #806b9b; }
+.holiday-marker { position: absolute; z-index: 4; right: 7px; bottom: 7px; display: grid; width: 17px; height: 17px; place-items: center; border-radius: 5px; font-size: 9px; font-weight: 700; line-height: 1; cursor: help; }
+.holiday-marker.holiday { color: #76632f; background: #eadfac; }
+.holiday-marker.workday { color: #765846; background: #dfcbbd; }
 .schedule-day-events { position: absolute; top: 42px; right: 7px; left: 7px; display: flex; max-height: calc(100% - 49px); flex-direction: column; gap: 5px; overflow: hidden; }
+.schedule-day.has-holiday-marker .schedule-day-events { right: 30px; }
 .schedule-day.has-period .schedule-day-events { top: 46px; max-height: calc(100% - 53px); }
 .schedule-day-events.has-many-interviews { height: 66px; max-height: 66px; overflow-y: auto; padding-right: 1px; scrollbar-width: none; scroll-snap-type: y mandatory; }
 .schedule-day.has-period .schedule-day-events.has-many-interviews { height: 66px; max-height: 66px; }
@@ -901,6 +905,7 @@ textarea:focus-visible {
   .schedule-header-actions .button { padding: 7px 8px; font-size: 10px; }
   .schedule-grid { grid-auto-rows: 90px; }
   .schedule-day { height: 90px; padding: 5px; }
+  .holiday-marker { right: 5px; bottom: 5px; width: 15px; height: 15px; border-radius: 4px; font-size: 8px; }
   .schedule-day-events { top: 34px; right: 5px; left: 5px; max-height: calc(100% - 39px); }
   .schedule-day.has-period .schedule-day-events { top: 41px; max-height: calc(100% - 46px); }
   .schedule-day-events.has-many-interviews { height: 48px; max-height: 48px; }
